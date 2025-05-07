@@ -602,6 +602,8 @@ void routing_manager_base::unsubscribe(client_t _client, service_t _service,
     }
 }
 
+// ================================
+/*
 void routing_manager_base::notify(service_t _service, instance_t _instance,
             event_t _event, std::shared_ptr<payload> _payload,
             bool _force, bool _flush) {
@@ -615,10 +617,48 @@ void routing_manager_base::notify(service_t _service, instance_t _instance,
             << "]";
     }
 }
+*/
 
+void routing_manager_base::notify(service_t _service, instance_t _instance,
+            event_t _event, std::shared_ptr<payload> _payload,
+            bool _force, bool _flush) {
+    byte_t domain_1 = 10;
+    byte_t domain_2 = 20;
+    std::shared_ptr<event> its_event = find_event(_service, _instance, _event);
+    if (its_event) {
+        VSOMEIP_WARNING << "<routing_manager_base::notify> go its_event1";
+        auto serializer1 = get_serializer(_service, _instance, domain_1, true);  // domain_num1
+        its_event->set_payload(serializer1, _payload, domain_1, _force, _flush);
+    } else {
+        VSOMEIP_WARNING << "Attempt to update the undefined event/field ["
+            << std::hex << _service << "." << _instance << "." << _event
+            << "]";
+    }
+
+    std::shared_ptr<event> its_event2 = find_event(_service, _instance, _event);
+    if (its_event2) {
+        VSOMEIP_WARNING << "<routing_manager_base::notify> go its_event2";
+        auto serializer2 = get_serializer(_service, _instance, domain_2, true);  // domain_num2
+        its_event2->set_payload(serializer2, _payload, domain_2, _force, _flush);
+    } else {
+        VSOMEIP_WARNING << "Attempt to update the undefined event/field ["
+            << std::hex << _service << "." << _instance << "." << _event
+            << "]";
+    }
+}
+// ================================
+
+
+
+// =============================================
+/*
 void routing_manager_base::notify_one(service_t _service, instance_t _instance,
             event_t _event, std::shared_ptr<payload> _payload,
             client_t _client, bool _force, bool _flush) {
+
+// =========================
+    VSOMEIP_WARNING << "<routing_manager_base::notify_one>";
+// =========================
     std::shared_ptr<event> its_event = find_event(_service, _instance, _event);
     if (its_event) {
         // Event is valid for service/instance
@@ -647,6 +687,7 @@ void routing_manager_base::notify_one(service_t _service, instance_t _instance,
                 auto serializer = get_serializer(_service, _instance, true);
                 its_event->set_payload(serializer, _payload, _client, _force, _flush);
             } else {
+                VSOMEIP_WARNING << "<routing_manager_base::notify_one> create notification";
                 std::shared_ptr<message> its_notification
                     = runtime::get()->create_notification();
                 its_notification->set_service(_service);
@@ -669,6 +710,66 @@ void routing_manager_base::notify_one(service_t _service, instance_t _instance,
             << "]";
     }
 }
+*/
+void routing_manager_base::notify_one(service_t _service, instance_t _instance,
+            event_t _event, std::shared_ptr<payload> _payload,
+            client_t _client, bool _force, bool _flush) {
+
+// =========================
+    VSOMEIP_WARNING << "<routing_manager_base::notify_one>";
+// =========================
+    std::shared_ptr<event> its_event = find_event(_service, _instance, _event);
+    if (its_event) {
+        // Event is valid for service/instance
+        bool found_eventgroup(false);
+        bool already_subscribed(false);
+        eventgroup_t valid_group = 0;
+        // Iterate over all groups of the event to ensure at least
+        // one valid eventgroup for service/instance exists.
+        for (auto its_group : its_event->get_eventgroups()) {
+            auto its_eventgroup = find_eventgroup(_service, _instance, its_group);
+            if (its_eventgroup) {
+                // Eventgroup is valid for service/instance
+                found_eventgroup = true;
+                valid_group = its_group;
+                if (find_local(_client)) {
+                    already_subscribed = its_event->has_subscriber(its_group, _client);
+                } else {
+                    // Remotes always needs to be marked as subscribed here
+                    already_subscribed = true;
+                }
+                break;
+            }
+        }
+        if (found_eventgroup) {
+            if (already_subscribed) {
+                auto serializer = get_serializer(_service, _instance, 10, true);
+                its_event->set_payload(serializer, _payload, _client, _force, _flush);
+            } else {
+                VSOMEIP_WARNING << "<routing_manager_base::notify_one> create notification";
+                std::shared_ptr<message> its_notification
+                    = runtime::get()->create_notification(10);
+                its_notification->set_service(_service);
+                its_notification->set_instance(_instance);
+                its_notification->set_method(_event);
+                its_notification->set_payload(_payload);
+                auto service_info = find_service(_service, _instance);
+                if (service_info) {
+                    its_notification->set_interface_version(service_info->get_major());
+                }
+                {
+                    std::lock_guard<std::mutex> its_lock(pending_notify_ones_mutex_);
+                    pending_notify_ones_[_service][_instance][valid_group] = its_notification;
+                }
+            }
+        }
+    } else {
+        VSOMEIP_WARNING << "Attempt to update the undefined event/field ["
+            << std::hex << _service << "." << _instance << "." << _event
+            << "]";
+    }
+}
+// =============================================
 
 void routing_manager_base::send_pending_notify_ones(service_t _service, instance_t _instance,
             eventgroup_t _eventgroup, client_t _client) {
@@ -756,6 +857,8 @@ void routing_manager_base::notify_one_current_value(
     }
 }
 
+// ======================
+/*
 bool routing_manager_base::send(client_t its_client,
         std::shared_ptr<message> _message,
         bool _flush) {
@@ -776,6 +879,29 @@ bool routing_manager_base::send(client_t its_client,
     }
     return (is_sent);
 }
+*/
+bool routing_manager_base::send(client_t its_client,
+        std::shared_ptr<message> _message,
+        bool _flush) {
+    VSOMEIP_WARNING << "<routing_manager_base::send>";
+    bool is_sent(false);
+    if (utility::is_request(_message->get_message_type())) {
+        _message->set_client(its_client);
+    }
+    auto serializer = get_serializer(_message->get_service(), _message->get_instance(), 10);
+    if (serializer) {
+        std::vector<byte_t> buffer;
+        if (serializer->serialize_message(_message.get(), buffer)) {
+            is_sent = send(its_client, buffer.data(), static_cast<uint32_t>(buffer.size()),
+                           _message->get_instance(),
+                           _flush, _message->is_reliable());
+        } else {
+            VSOMEIP_ERROR << "Failed to serialize message. Check message size!";
+        }
+    }
+    return (is_sent);
+}
+// ======================
 
 // ********************************* PROTECTED **************************************
 std::shared_ptr<serviceinfo> routing_manager_base::create_service_info(
@@ -1320,7 +1446,13 @@ routing_manager_base::get_local_endpoints() {
     return local_endpoints_;
 }
 
+// ==============================
+/*
 void routing_manager_base::send_pending_events(service_t _service, instance_t _instance) {
+
+    // =====================
+    VSOMEIP_INFO << "send pending events";
+    // =====================
 
     auto serializer = get_serializer(_service, _instance);
     if (!serializer) {
@@ -1354,6 +1486,48 @@ void routing_manager_base::send_pending_events(service_t _service, instance_t _i
         }
     });
 }
+*/
+void routing_manager_base::send_pending_events(service_t _service, instance_t _instance) {
+
+    // =====================
+    VSOMEIP_INFO << "send pending events";
+    // =====================
+
+    auto serializer = get_serializer(_service, _instance, 10);
+    if (!serializer) {
+        return;
+    }
+
+    std::vector<std::shared_ptr<event>> its_events;
+    {
+        std::lock_guard<std::mutex> its_lock(events_mutex_);
+        const auto found_service = events_.find(_service);
+        if (found_service == events_.end()) {
+            return;
+        }
+        const auto found_instance = found_service->second.find(_instance);
+        if (found_instance == found_service->second.end()) {
+            return;
+        }
+
+        // Get a copy of the events to release the lock
+        its_events.reserve(found_instance->second.size());
+        for (const auto& pair : found_instance->second) {
+            its_events.emplace_back(pair.second);
+        }
+    }
+
+    // Send the initial notification if necessary
+    
+    std::for_each(its_events.begin(), its_events.end(), [&serializer](const std::shared_ptr<event>& _event) {
+        byte_t domain_ = 10;
+        auto payload = _event->get_cached_payload();
+        if (payload) {
+            _event->set_payload(serializer, payload, domain_, true, false);
+        }
+    });
+}
+// =============================
 
 std::shared_ptr<session_parameters>
 routing_manager_base::find_session_parameters(service_t _service, instance_t _instance) const {
@@ -1407,6 +1581,8 @@ void routing_manager_base::clear_session_parameters(service_t _service, instance
     }
 }
 
+// ======================================
+/*
 std::shared_ptr<message_serializer> routing_manager_base::get_serializer(service_t _service, instance_t _instance,
                                                                          bool _silent) const {
     auto session_info = find_session_parameters(_service, _instance);
@@ -1421,12 +1597,28 @@ std::shared_ptr<message_serializer> routing_manager_base::get_serializer(service
 
     return serializer;
 }
+*/
+std::shared_ptr<message_serializer> routing_manager_base::get_serializer(service_t _service, instance_t _instance, byte_t _domain_num,
+                                                                         bool _silent) const {
+    auto session_info = find_session_parameters(_service, _instance);
+    auto serializer = session_info
+                      ? session_info->get_serializer(_domain_num)  // get domain serializer
+                      : std::shared_ptr<message_serializer>();
+
+    if (!serializer && !_silent) {
+        VSOMEIP_WARNING << "Message serializer not yet initialized ["
+                        << std::hex << _service << "." << _instance << "]";
+    }
+
+    return serializer;
+}
+// ======================================
 
 std::shared_ptr<message_deserializer> routing_manager_base::get_deserializer(service_t _service, instance_t _instance,
                                                                              bool _silent) const {
     auto session_info = find_session_parameters(_service, _instance);
     auto deserializer = session_info
-                        ? session_info->get_deserializer()
+                        ? session_info->get_deserializer()  // session_parameter.cpp
                         : std::shared_ptr<message_deserializer>();
 
     if (!deserializer && !_silent) {
@@ -1436,6 +1628,23 @@ std::shared_ptr<message_deserializer> routing_manager_base::get_deserializer(ser
 
     return deserializer;
 }
+
+// ================================================
+std::shared_ptr<message_deserializer> routing_manager_base::update_domain_key(service_t _service, instance_t _instance, key // 수정
+                                                                             bool _silent) const {
+    auto session_info = find_session_parameters(_service, _instance);
+    auto deserializer = session_info
+                        ? session_info->get_deserializer()  // session_parameter.cpp
+                        : std::shared_ptr<message_deserializer>();
+
+    if (!deserializer && !_silent) {
+        VSOMEIP_WARNING << "Message deserializer not yet initialized ["
+                        << std::hex << _service << "." << _instance << "]";
+    }
+
+    return deserializer;
+}
+// ================================================
 
 bool routing_manager_base::send_session_establishment_request(service_t _service, instance_t _instance,
                                                               major_version_t _major, minor_version_t _minor,
@@ -1513,6 +1722,7 @@ bool routing_manager_base::send_session_establishment_request_unlocked(
 
     serializer its_serializer(configuration_->get_buffer_shrink_threshold());
     request.set_session(host_->get_session());
+    
     if (!its_serializer.serialize(&request)) {
         VSOMEIP_ERROR << "Failed to serialize the session establishment request for service "
                       << std::hex << _service << ":" << _instance;
@@ -1549,6 +1759,7 @@ bool routing_manager_base::send_session_establishment_request_unlocked(
 bool routing_manager_base::dispatch_session_establishment_message(service_t _service, instance_t _instance,
                                                                   method_t _method, bool _reliable,
                                                                   const byte_t *_data, length_t _size) {
+    VSOMEIP_WARNING << "<routing_manager_base::dispatch_session_establishment_message> triggered";
 
     if (session_establishment_message::METHOD_ID != _method || _size <= VSOMEIP_PAYLOAD_POS) {
         return false;
@@ -1584,6 +1795,12 @@ bool routing_manager_base::dispatch_session_establishment_message(service_t _ser
 
             return true;
         }
+
+// ========================
+        case message_type_e::MT_NOTIFICATION: {
+            VSOMEIP_WARNING << "<routing_manager_base::dispatch_session_establishment_message> MT_NOTIFICATION DETECTED";
+        }
+// ========================
 
         default:
             return true;
@@ -1630,6 +1847,9 @@ bool routing_manager_base::on_session_establishment_request_received(
     }
 
     serializer its_serializer(configuration_->get_buffer_shrink_threshold());
+
+    // VSOMEIP_WARNING << "response is " << response;
+
     if (!its_serializer.serialize(&response)) {
         VSOMEIP_ERROR << "Failed to serialize the session establishment response for service "
                       << std::hex << request.get_service() << ":" << response.get_instance();

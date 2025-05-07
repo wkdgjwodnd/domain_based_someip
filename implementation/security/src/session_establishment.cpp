@@ -16,6 +16,10 @@
 #include "../../message/include/deserializer.hpp"
 #include "../../utility/include/byteorder.hpp"
 
+// =================
+#include <vsomeip/constants.hpp>
+// =================
+
 namespace vsomeip {
 
 /* ** SESSION ESTABLISHMENT MESSAGE ** */
@@ -47,10 +51,12 @@ void session_establishment_message::set_payload(std::shared_ptr<payload> _payloa
 }
 
 length_t session_establishment_message::get_length() const {
+    // ===============
     return message_impl::get_length() +
-           4 + /* protocol_version, asymmetric_algorithm id, message_digest_id, unused */
+           5 + /* protocol_version, asymmetric_algorithm id, message_digest_id, unused, domain_num */
            static_cast<length_t>(fingerprint_.size()) +
            static_cast<length_t>(challenge_.size());
+    // ===============
 }
 
 bool session_establishment_message::serialize(serializer *_to) const {
@@ -61,11 +67,16 @@ bool session_establishment_message::serialize(serializer *_to) const {
     }
 
     uint8_t unused(0);
+    byte_t tt=10;
     return nullptr != _to && 0 == _to->get_size() &&
            message_impl::serialize(_to) &&
            _to->serialize(static_cast<uint8_t>(protocol_version_)) &&
            _to->serialize(static_cast<uint8_t>(asymmetric_algorithm_)) &&
            _to->serialize(static_cast<uint8_t>(message_digest_algorithm_)) &&
+	   // ====================
+	   // _to->serialize(vsomeip::domain_num) &&
+	   _to->serialize(tt) &&     // 도메인 번호 serialize
+	   // ====================
            _to->serialize(unused) &&
            _to->serialize(challenge_.data(), static_cast<uint32_t>(challenge_.size())) &&
            _to->serialize(fingerprint_.data(), static_cast<uint32_t>(fingerprint_.size()));
@@ -75,6 +86,9 @@ bool session_establishment_message::deserialize(deserializer *_from) {
     uint8_t tmp_version;
     uint8_t tmp_asymmetric_algorithm;
     uint8_t tmp_message_digest_algorithm;
+// ================
+    uint8_t tmp_domain_num_;
+// ================
     uint8_t unused;
 
     valid_ = nullptr != _from &&
@@ -83,6 +97,9 @@ bool session_establishment_message::deserialize(deserializer *_from) {
              _from->deserialize(tmp_version) &&
              _from->deserialize(tmp_asymmetric_algorithm) &&
              _from->deserialize(tmp_message_digest_algorithm) &&
+// =========================
+             _from->deserialize(tmp_domain_num_) &&    // 도메인 번호 deserialize
+// =========================
              _from->deserialize(unused) &&
              _from->deserialize(challenge_.data(), challenge_.size()) &&
              _from->deserialize(fingerprint_.data(), challenge_.size());
@@ -95,6 +112,10 @@ bool session_establishment_message::deserialize(deserializer *_from) {
         valid_ = protocol_version::V_1_0 == protocol_version_ &&
                  FINGERPRINT_DIGEST_ALGORITHM == message_digest_algorithm_;
     }
+// ===========
+    VSOMEIP_INFO << "!!!!!!!!!!!!!!!!!!    received domain_number: " << (int)tmp_domain_num_;
+    domain_num_ = (int)tmp_domain_num_;
+// ===========
 
     return valid_;
 }
@@ -115,6 +136,12 @@ const certificate_fingerprint_t &session_establishment_message::get_fingerprint(
 bool session_establishment_message::is_valid() const {
     return valid_;
 }
+
+// =============================
+byte_t session_establishment_message::get_domain_num() const {
+    return domain_num_;
+}
+// =============================
 
 /* ** SESSION ESTABLISHMENT REQUEST ** */
 
@@ -155,6 +182,11 @@ session_establishment_response::session_establishment_response(const session_est
     challenge_ = _request.get_challenge();
     valid_ = _request.is_valid() && nullptr != session_parameters_ &&
              session_parameters_->is_valid() && session_parameters_->is_provider();
+
+// ===========
+    domain_num_ = _request.get_domain_num();
+    VSOMEIP_INFO << "<session_establishment_response::session_establishment_response> domain num is " << (int)domain_num_;
+// ===========
     set_session(_request.get_session());
     set_message_type(message_type_e::MT_RESPONSE);
     set_return_code(return_code_e::E_OK);
@@ -168,6 +200,8 @@ length_t session_establishment_response::get_length() const {
 
 bool session_establishment_response::serialize(serializer *_to) const {
 
+    VSOMEIP_WARNING << "<session_establishmnet_response::serialize> serializing...";
+
     crypto_instance_t instance_id;
     bool success = session_establishment_message::serialize(_to) &&
                    _to->serialize(static_cast<uint8_t>(session_parameters_->get_security_level())) &&
@@ -177,20 +211,44 @@ bool session_establishment_response::serialize(serializer *_to) const {
                    _to->serialize(instance_id);
 
     if (!success) {
+        VSOMEIP_ERROR << "<session_establishmnet_response::serialize> serializing failed!!";
         return false;
     }
-
-    auto encrypted_symmetric_key = session_parameters_->get_encrypted_key(public_key_);
+// ================
+    auto encrypted_symmetric_key = session_parameters_->get_encrypted_key(public_key_, domain_num_); // 도메인 키를 구함
+    auto encrypted_update_key = session_parameters_->get_encrypted_update_key(public_key_, domain_num_); // 업데이트 키를 구함
+// ================
     auto signature_length = static_cast<uint16_t>(private_key_->get_signature_length(_to->get_size()));
+
+    /*
     success = !encrypted_symmetric_key.empty() &&
               _to->serialize(static_cast<uint16_t>(encrypted_symmetric_key.size())) &&
               _to->serialize(encrypted_symmetric_key) &&
               _to->serialize(signature_length);
+    */
+    success = !encrypted_symmetric_key.empty() &&
+              _to->serialize(static_cast<uint16_t>(encrypted_symmetric_key.size())) &&
+              _to->serialize(encrypted_symmetric_key) &&
+              _to->serialize(encrypted_update_key) &&
+              _to->serialize(signature_length);  // symmeetric_key 및 update_key를 serialize 함
 
-    if (!success) {
+
+
+/*
+    VSOMEIP_WARNING << "check true false : " << !encrypted_symmetric_key.empty() << " " <<// false
+              _to->serialize(static_cast<uint16_t>(encrypted_symmetric_key.size())) << " " <<
+              _to->serialize(encrypted_symmetric_key) << " " <<
+              _to->serialize(signature_length) << " key length is " << 
+              static_cast<uint16_t>(encrypted_symmetric_key.size());
+*/
+
+    if (!success) {  // quiz
+        VSOMEIP_ERROR << "<session_establishmnet_response::serialize> serializing failed!!!!!";
         return false;
     }
 
+// ========================================== add encrypted_update_key/
+/*
     length_t length = get_length() +
                       static_cast<length_t>(sizeof(uint16_t) + encrypted_symmetric_key.size()) +
                       static_cast<length_t>(sizeof(signature_length) + signature_length);
@@ -204,6 +262,23 @@ bool session_establishment_response::serialize(serializer *_to) const {
     std::vector<byte_t> digital_signature;
     success = private_key_->sign(_to->get_data(), _to->get_size(), digital_signature) &&
               _to->serialize(digital_signature);
+*/
+    length_t length = get_length() +
+                      static_cast<length_t>(sizeof(uint16_t) + encrypted_symmetric_key.size()) +
+                      static_cast<length_t>(sizeof(uint16_t) + encrypted_update_key.size()) +
+                      static_cast<length_t>(sizeof(signature_length) + signature_length);
+
+    // Adapt the message length
+    *(_to->get_data() + VSOMEIP_LENGTH_POS_MIN + 0) = VSOMEIP_LONG_BYTE3(length);
+    *(_to->get_data() + VSOMEIP_LENGTH_POS_MIN + 1) = VSOMEIP_LONG_BYTE2(length);
+    *(_to->get_data() + VSOMEIP_LENGTH_POS_MIN + 2) = VSOMEIP_LONG_BYTE1(length);
+    *(_to->get_data() + VSOMEIP_LENGTH_POS_MIN + 3) = VSOMEIP_LONG_BYTE0(length);
+
+    std::vector<byte_t> digital_signature;
+    success = private_key_->sign(_to->get_data(), _to->get_size(), digital_signature) &&
+              _to->serialize(digital_signature);
+
+// ========================================== add encrypted_update_key
 
     return success;
 }
@@ -212,9 +287,9 @@ bool session_establishment_response::deserialize_base(deserializer *_from) {
 
     uint8_t tmp_security_level;
     valid_ = session_establishment_message::deserialize(_from) &&
-             _from->deserialize(tmp_security_level);
+             _from->deserialize(tmp_security_level);  // deserialize security level
 
-    if (valid_) {
+    if (valid_) {  // 적합한 security level이라면
         security_level_ = static_cast<security_level>(tmp_security_level);
     }
     return valid_;
@@ -227,9 +302,9 @@ bool session_establishment_response::deserialize(deserializer *_from) {
     crypto_instance_t crypto_instance_id;
 
     valid_ = valid_ && nullptr != _from &&
-             _from->deserialize(tmp_crypto_algorithm) &&
-             _from->deserialize(crypto_instance_id) &&
-             _from->deserialize(encrypted_key_length);
+             _from->deserialize(tmp_crypto_algorithm) &&  // crypto algorithm deserialize
+             _from->deserialize(crypto_instance_id) &&  // instance id deserialize
+             _from->deserialize(encrypted_key_length);  // encrypted key lenght deserialize
 
     if (!valid_) {
         return false;
@@ -239,12 +314,23 @@ bool session_establishment_response::deserialize(deserializer *_from) {
             security_level_, static_cast<crypto_algorithm>(tmp_crypto_algorithm)
     };
     std::vector<byte_t> encrypted_symmetric_key;
-    encrypted_symmetric_key.reserve(encrypted_key_length);
-
+    encrypted_symmetric_key.reserve(encrypted_key_length);  // symmetric key 길이 
+//=======
+    std::vector<byte_t> encrypted_update_key;
+    encrypted_update_key.reserve(encrypted_key_length);
+//=======
+// ============================
+    /*
     valid_ = _from->deserialize(encrypted_symmetric_key) &&
              _from->deserialize(signature_length) &&
              _from->get_remaining() == signature_length;
-
+    */
+    valid_ = _from->deserialize(encrypted_symmetric_key) &&  // encrypted symmetric key deserialize
+             _from->deserialize(encrypted_update_key) &&
+             _from->deserialize(signature_length) &&
+             _from->get_remaining() == signature_length;
+    
+// =============================
     if (!valid_) {
         return false;
     }
@@ -258,10 +344,16 @@ bool session_establishment_response::deserialize(deserializer *_from) {
     if (!valid_) {
         return false;
     }
-
+// ============================================
+/*
     session_parameters_ = std::make_shared<session_parameters>(symmetric_algorithm, encrypted_symmetric_key,
                                                                static_cast<crypto_instance_t>(crypto_instance_id),
                                                                private_key_, buffer_shrink_threshold_);
+*/
+    session_parameters_ = std::make_shared<session_parameters>(symmetric_algorithm, encrypted_symmetric_key, encrypted_update_key,
+                                                               static_cast<crypto_instance_t>(crypto_instance_id),
+                                                               private_key_, buffer_shrink_threshold_);
+// ============================================
     return session_parameters_->is_valid();
 }
 

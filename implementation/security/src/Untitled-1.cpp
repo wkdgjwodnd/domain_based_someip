@@ -1247,6 +1247,8 @@ void routing_manager_impl::on_message(const byte_t *_data, length_t _size,
                     }
                 }
             }
+            // ================================================================
+            /*
             if (!deliver_specific_endpoint_message(
                     its_service, its_instance, _data, _size, _receiver)) {
                 byte_t front_client_id = 0x39;   // 클라이언트 앞 바이트
@@ -1283,6 +1285,70 @@ void routing_manager_impl::on_message(const byte_t *_data, length_t _size,
                 on_message(its_service, its_instance, _data, _size, _receiver->is_reliable(), its_is_crc_valid);
 
             }
+            */
+
+            if (!deliver_specific_endpoint_message(
+                    its_service, its_instance, _data, _size, _receiver)) {
+                byte_t front_client_id = 0x39;   // 클라이언트 앞 바이트
+                byte_t behind_client_id = 0x18;  // 클라이언트 뒤 바이트
+                // =====================================
+                byte_t front_client_id_uk = 0x21;  // 키 업데이트 메시지 아이디
+                byte_t behind_client_id_uk = 0x43;   // 키 업데이트 메시지 아이디
+                VSOMEIP_WARNING << "<void routing_manager_impl::on_message> deliver_specific_endpoint_message";
+                // =====================================
+
+                if( utility::is_notification(_data[VSOMEIP_MESSAGE_TYPE_POS])) {
+                    // =====================================
+                    VSOMEIP_WARNING << "<void routing_manager_impl::on_message> is_notification set cliuent_id to zero for all message";
+                    // =====================================
+                    byte_t *its_data = const_cast<byte_t *>(_data);
+
+                    // ==================
+                    VSOMEIP_WARNING << "======================= client id is :" << static_cast<int>(_data[VSOMEIP_CLIENT_POS_MIN]) << static_cast<int>(_data[VSOMEIP_CLIENT_POS_MAX]);
+                    // ==================
+
+                    // ==================================
+                    /*
+                    if (!((_data[VSOMEIP_CLIENT_POS_MIN] == front_client_id) && (_data[VSOMEIP_CLIENT_POS_MAX] == behind_client_id))) {
+                        VSOMEIP_WARNING << "!!!!! CLIENT ID IS NOT MATCHED !!!!!";
+                        return;
+                    }
+                    */
+                    if ( (_data[VSOMEIP_CLIENT_POS_MIN] == front_client_id) && (_data[VSOMEIP_CLIENT_POS_MAX] == behind_client_id) ) 
+                    {  // 적합한 클라이언트 아이디 메시지라면
+
+                        its_data[VSOMEIP_CLIENT_POS_MIN] = front_client_id;  // 클라이언트 앞 바이트
+                        its_data[VSOMEIP_CLIENT_POS_MAX] = behind_client_id; // 클라이언트 뒤 바이트
+
+                        on_message(its_service, its_instance, _data, _size, _receiver->is_reliable(), its_is_crc_valid);
+                    }
+                    else if ( (_data[VSOMEIP_CLIENT_POS_MIN] == front_client_id_uk) && (_data[VSOMEIP_CLIENT_POS_MAX] == behind_client_id_uk) ) 
+                    {  // 키 업데이트 메시지라면
+
+                        its_data[VSOMEIP_CLIENT_POS_MIN] = front_client_id_uk;  // 클라이언트 앞 바이트
+                        its_data[VSOMEIP_CLIENT_POS_MAX] = behind_client_id_uk; // 클라이언트 뒤 바이트
+
+                        on_message_key_update(its_service, its_instance, _data, _size, _receiver->is_reliable(), its_is_crc_valid);  // client_id를 포함한 함수
+                    }
+
+                    else {  // 클라이언트 아이디가 적합하지 않다면
+                        VSOMEIP_WARNING << "!!!!! CLIENT ID IS NOT MATCHED !!!!!";
+                        return;
+                    }
+                    // ==================================
+
+                    
+                    
+                }
+
+                // Common way of message handling
+#ifdef USE_DLT
+                is_forwarded =
+#endif
+                on_message(its_service, its_instance, _data, _size, _receiver->is_reliable(), its_is_crc_valid);
+
+            }
+            // ================================================================
         }
     }
 #ifdef USE_DLT
@@ -1305,6 +1371,8 @@ void routing_manager_impl::on_message(const byte_t *_data, length_t _size,
     }
 #endif
 }
+
+// ===========================================================
 
 bool routing_manager_impl::on_message(
         service_t _service, instance_t _instance,
@@ -1344,6 +1412,48 @@ bool routing_manager_impl::on_message(
     return is_forwarded;
 }
 
+bool routing_manager_impl::on_message_key_update(  // 키 업데이트
+        service_t _service, instance_t _instance,
+        const byte_t *_data, length_t _size,
+        bool _reliable, bool _is_valid_crc) {
+// ========
+    VSOMEIP_WARNING << "<bool routing_manager_impl::on_message> Message Detected";
+// ========
+
+    byte_t front_client_id_uk = 0x21;  // 키 업데이트 메시지 아이디
+    byte_t behind_client_id_uk = 0x43;   // 키 업데이트 메시지 아이디
+#if 0
+    std::stringstream msg;
+    msg << "rmi::on_message("
+            << std::hex << std::setw(4) << std::setfill('0')
+            << _service << ", " << _instance << "): ";
+    for (uint32_t i = 0; i < _size; ++i)
+        msg << std::hex << std::setw(2) << std::setfill('0') << (int)_data[i] << " ";
+    VSOMEIP_INFO << msg.str();
+#endif
+    client_t its_client;
+    bool is_forwarded(true);
+
+    if (utility::is_request(_data[VSOMEIP_MESSAGE_TYPE_POS])) {
+        its_client = find_local_client(_service, _instance);
+    } else {
+        its_client = VSOMEIP_BYTES_TO_WORD(
+                _data[VSOMEIP_CLIENT_POS_MIN],
+                _data[VSOMEIP_CLIENT_POS_MAX]);
+    }
+
+    if (// its_client == VSOMEIP_ROUTING_CLIENT &&
+            utility::is_notification(_data[VSOMEIP_MESSAGE_TYPE_POS])) {
+        is_forwarded = deliver_notification(_service, _instance, _data, _size, _reliable, _is_valid_crc);
+    } else if (its_client == host_->get_client()) {
+        deliver_message(_data, _size, _instance, _reliable, _is_valid_crc);
+    } else {
+        send(its_client, _data, _size, _instance, true, _reliable, _is_valid_crc); //send to proxy
+    }
+    return is_forwarded;
+}
+
+// ===========================================================
 void routing_manager_impl::on_notification(client_t _client,
         service_t _service, instance_t _instance,
         const byte_t *_data, length_t _size, bool _notify_one) {
@@ -1690,9 +1800,9 @@ bool routing_manager_impl::deliver_message(const byte_t *_data, length_t _size,
         return true;
     }
 
-    auto deserializer = get_deserializer(its_service, _instance);  // 복호화 알고리즘 가져오기
+    auto deserializer = get_deserializer(its_service, _instance);
     if (deserializer) {
-        std::shared_ptr<message> its_message(deserializer->deserialize_message(_data, _size));  // 데이터 복호화 수행
+        std::shared_ptr<message> its_message(deserializer->deserialize_message(_data, _size));
 
         if (its_message) {
             its_message->set_instance(_instance);

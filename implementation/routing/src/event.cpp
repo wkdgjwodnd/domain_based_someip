@@ -98,17 +98,28 @@ const std::shared_ptr<payload> event::get_cached_payload() const {
     return cached_payload_;
 }
 
+// =========================
+/*
 void event::set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
-                        std::shared_ptr<payload> &_payload, bool _force, bool _flush) {
+                        std::shared_ptr<payload> &_payload, 
+                        const byte_t domain_num_, bool _force, bool _flush) {
+
+    VSOMEIP_WARNING << "<evnet::set_payload> set_payload 1";
 
     std::lock_guard<std::mutex> its_lock(mutex_);
     if (is_provided_) {
+        VSOMEIP_WARNING << "<evnet::set_payload> is_provided_ is true";
         if (set_payload_helper(_payload, _force)) {
-            if (reset_payload(_message_serializer, _payload)) {
+            VSOMEIP_WARNING << "<evnet::set_payload> set_payload_helper is true";
+            if (reset_payload(_message_serializer, _payload, domain_num_)) {
+                VSOMEIP_WARNING << "<evnet::set_payload> reset_payload is true";
                 if (is_updating_on_change_) {
-                    if (change_resets_cycle_)
+                    VSOMEIP_WARNING << "<evnet::set_payload> is_updating_on_change_ is true";
+                    if (change_resets_cycle_) {
+                        VSOMEIP_WARNING << "<evnet::set_payload> change_resets_cycle_ is true";
                         stop_cycle();
-
+                    }
+                    VSOMEIP_WARNING << "<evnet::set_payload> notify flush detect";
                     notify(_flush);
 
                     if (change_resets_cycle_)
@@ -121,14 +132,47 @@ void event::set_payload(const std::shared_ptr<message_serializer> &_message_seri
                      << get_event() << " as it isn't provided";
     }
 }
+*/
+void event::set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
+                        std::shared_ptr<payload> &_payload, 
+                        const byte_t domain_num_, bool _force, bool _flush) {
+
+    VSOMEIP_WARNING << "<evnet::set_payload> set_payload 1";
+
+    std::lock_guard<std::mutex> its_lock(mutex_);
+    if (is_provided_) {
+        if (reset_payload(_message_serializer, _payload, domain_num_)) {
+            // VSOMEIP_WARNING << "<evnet::set_payload> reset_payload is true";
+            if (is_updating_on_change_) {
+                // VSOMEIP_WARNING << "<evnet::set_payload> is_updating_on_change_ is true";
+                if (change_resets_cycle_) {
+                    // VSOMEIP_WARNING << "<evnet::set_payload> change_resets_cycle_ is true";
+                    stop_cycle();
+                }
+                // VSOMEIP_WARNING << "<evnet::set_payload> notify flush detect";
+                notify(_flush);
+
+                if (change_resets_cycle_)
+                    start_cycle();
+            }
+        }
+        
+    } else {
+        VSOMEIP_INFO << "Can't set payload for event " << std::hex
+                     << get_event() << " as it isn't provided";
+    }
+}
+// =========================
 
 void event::set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
                         std::shared_ptr<payload> &_payload, client_t _client, bool _force, bool _flush) {
 
+    VSOMEIP_WARNING << "<evnet::set_payload> set_payload 2";
+
     std::lock_guard<std::mutex> its_lock(mutex_);
     if (is_provided_) {
         if (set_payload_helper(_payload, _force)) {
-            if (reset_payload(_message_serializer, _payload)) {
+            if (reset_payload(_message_serializer, _payload, 10)) {
                 if (is_updating_on_change_) {
                     notify_one(_client, _flush);
                 }
@@ -144,10 +188,12 @@ void event::set_payload(const std::shared_ptr<message_serializer> &_message_seri
                         std::shared_ptr<payload> &_payload, const std::shared_ptr<endpoint_definition> &_target,
                         bool _force, bool _flush) {
 
+    VSOMEIP_WARNING << "<evnet::set_payload> set_payload 3";
+
     std::lock_guard<std::mutex> its_lock(mutex_);
     if (is_provided_) {
         if (set_payload_helper(_payload, _force)) {
-            if (reset_payload(_message_serializer, _payload)) {
+            if (reset_payload(_message_serializer, _payload, 10)) {
                 if (is_updating_on_change_) {
                     notify_one(_target, _flush);
                 }
@@ -360,14 +406,20 @@ void event::reset_message(const byte_t *_data, length_t _size) {
 }
 
 bool event::reset_payload(const std::shared_ptr<message_serializer> &_message_serializer,
-                          const std::shared_ptr<payload> &_payload) {
+                          const std::shared_ptr<payload> &_payload,
+                          const byte_t domain_num_) {
 
     cached_payload_ = runtime::get()->create_payload(_payload->get_data(), _payload->get_length());
     if (!_message_serializer) {
+        VSOMEIP_ERROR << "<evnet::reset_payload> !_message_serializer";
         return false;
     }
 
-    std::shared_ptr<message> its_notification = runtime::get()->create_notification();
+// ==================================
+    VSOMEIP_WARNING << "<event::reset_payload> create notification";
+// ==================================
+
+    std::shared_ptr<message> its_notification = runtime::get()->create_notification(domain_num_);
     its_notification->set_service(service_);
     its_notification->set_instance(instance_);
     its_notification->set_method(event_);

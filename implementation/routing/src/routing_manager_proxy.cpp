@@ -929,6 +929,7 @@ void routing_manager_proxy::on_message(const byte_t *_data, length_t _size,
 
             if (dispatch_session_establishment_message(its_service, its_instance, its_method, its_reliable,
                                                        message_ptr, its_message_size)) {
+                VSOMEIP_INFO << "<routing_manager_proxy::on_message> dispatch_session_establishment_message triggered";
                 return;
             }
 

@@ -29,8 +29,10 @@ public:
     std::shared_ptr<message> create_request(bool _reliable) const;
     std::shared_ptr<message> create_response(
             const std::shared_ptr<message> &_request) const;
-    std::shared_ptr<message> create_notification(bool _reliable) const;
-
+// ======
+    std::shared_ptr<message> create_notification(const byte_t domain_num_, bool _reliable) const;
+    // std::shared_ptr<message> create_notification(bool _reliable) const;
+// ======
     std::shared_ptr<payload> create_payload() const;
     std::shared_ptr<payload> create_payload(const byte_t *_data,
             uint32_t _size) const;

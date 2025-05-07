@@ -216,9 +216,14 @@ protected:
 
     std::shared_ptr<session_parameters> find_session_parameters(service_t _service, instance_t _instance) const;
 
+// ================================
+/*
     std::shared_ptr<message_serializer> get_serializer(service_t _service, instance_t _instance,
                                                        bool _silent = false) const;
-
+*/
+    std::shared_ptr<message_serializer> get_serializer(service_t _service, instance_t _instance, byte_t domain_num,
+                                                       bool _silent = false) const;          
+// ================================
     std::shared_ptr<message_deserializer> get_deserializer(service_t _service, instance_t _instance,
                                                            bool _silent = false) const;
 

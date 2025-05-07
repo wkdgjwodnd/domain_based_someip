@@ -10,6 +10,7 @@
 #include "../../message/include/message_impl.hpp"
 #include "../../message/include/payload_impl.hpp"
 
+#include "../../logging/include/logger.hpp"
 namespace vsomeip {
 
 std::map<std::string, std::string> runtime_impl::properties_;
@@ -84,8 +85,12 @@ std::shared_ptr<message> runtime_impl::create_response(
     return (its_response);
 }
 
+// ===========
+/*
 std::shared_ptr<message> runtime_impl::create_notification(
         bool _reliable) const {
+
+    VSOMEIP_WARNING << "create_notification1";
     std::shared_ptr<message_impl> its_notification = std::make_shared<
             message_impl>();
     its_notification->set_protocol_version(VSOMEIP_PROTOCOL_VERSION);
@@ -93,9 +98,37 @@ std::shared_ptr<message> runtime_impl::create_notification(
     its_notification->set_return_code(return_code_e::E_OK);
     its_notification->set_reliable(_reliable);
     its_notification->set_interface_version(DEFAULT_MAJOR);
+    // ===========================================
+    its_notification->set_client(0x3918);
+    // ===========================================
     return (its_notification);
 }
-
+*/
+std::shared_ptr<message> runtime_impl::create_notification(
+        const byte_t domain_num_,
+        bool _reliable) const {
+    VSOMEIP_WARNING << "create_notification2";
+    std::shared_ptr<message_impl> its_notification = std::make_shared<
+            message_impl>();
+    its_notification->set_protocol_version(VSOMEIP_PROTOCOL_VERSION);
+    its_notification->set_message_type(message_type_e::MT_NOTIFICATION);
+    its_notification->set_return_code(return_code_e::E_OK);
+    its_notification->set_reliable(_reliable);
+    its_notification->set_interface_version(DEFAULT_MAJOR);
+    // ===========================================
+    if(domain_num_ == 10){
+        its_notification->set_client(0x3918);
+    }
+    else if (domain_num_ == 20) {
+        its_notification->set_client(0x3919);
+    }
+    else {
+        its_notification->set_client(0x0000);
+    }
+    // ===========================================
+    return (its_notification);
+}
+// =============
 std::shared_ptr<payload> runtime_impl::create_payload() const {
     return (std::make_shared<payload_impl>());
 }
