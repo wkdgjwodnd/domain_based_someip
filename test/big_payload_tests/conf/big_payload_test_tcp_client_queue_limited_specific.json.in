@@ -1,0 +1,56 @@
+{
+    "unicast":"@TEST_IP_MASTER@",
+    "netmask":"255.255.255.0",
+    "logging":
+    {
+        "level":"info",
+        "console":"true",
+        "file":
+        {
+            "enable":"true",
+            "path":"/var/log/vsomeip.log"
+        },
+        "dlt":"true"
+    },
+    "applications":
+    [
+        {
+            "name":"big_payload_test_client",
+            "id":"0x1343"
+        }
+    ],
+    "endpoint-queue-limits" :
+    [
+        {
+            "unicast":"@TEST_IP_SLAVE@",
+            "ports":
+            [
+                {
+                    "port":"30509",
+                    "queue-size-limit":"614416"
+                }
+            ]
+        }
+    ],
+    "routing":"big_payload_test_client",
+    "service-discovery":
+    {
+        "enable":"true",
+        "multicast":"224.244.224.245",
+        "port":"30490",
+        "protocol":"udp"
+    },
+    "service-security" :
+    {
+        "certificates-path" : "@CRYPTO_CERTIFICATES_FOLDER_RELATIVE@",
+        "root-certificate-fingerprint" : "@CRYPTO_ROOT_CA_CERTIFICATE@",
+        "private-key-path" : "@CRYPTO_CHOSEN_KEY_RELATIVE@",
+        "certificate-fingerprint" : "@CRYPTO_CHOSEN_CERTIFICATE@"
+    },
+    "configuration-security" :
+    {
+        "signature-algorithm" : "rsa2048-sha256",
+        "certificate-fingerprint" : "@CRYPTO_CONFIGURATION_SIGNATURE_CERTIFICATE@",
+        "signature" : "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+}
