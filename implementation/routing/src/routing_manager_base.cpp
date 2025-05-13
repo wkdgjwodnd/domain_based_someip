@@ -618,7 +618,6 @@ void routing_manager_base::notify(service_t _service, instance_t _instance,
     }
 }
 */
-
 void routing_manager_base::notify(service_t _service, instance_t _instance,
             event_t _event, std::shared_ptr<payload> _payload,
             bool _force, bool _flush) {
@@ -1630,7 +1629,7 @@ std::shared_ptr<message_deserializer> routing_manager_base::get_deserializer(ser
 }
 
 // ================================================
-std::shared_ptr<message_deserializer> routing_manager_base::update_domain_key(service_t _service, instance_t _instance, key // 수정
+std::shared_ptr<message_deserializer> routing_manager_base::update_domain_key(service_t _service, instance_t _instance, byte_t _domain_key,
                                                                              bool _silent) const {
     auto session_info = find_session_parameters(_service, _instance);
     auto deserializer = session_info

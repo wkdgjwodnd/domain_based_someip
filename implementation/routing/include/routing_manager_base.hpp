@@ -227,6 +227,9 @@ protected:
     std::shared_ptr<message_deserializer> get_deserializer(service_t _service, instance_t _instance,
                                                            bool _silent = false) const;
 
+    std::shared_ptr<message_deserializer> update_domain_key(service_t _service, instance_t _instance, byte_t _domain_key,
+                                                           bool _silent = false) const;
+
     bool send_session_establishment_request(service_t _service, instance_t _instance,
                                             major_version_t _major, minor_version_t _minor,
                                             bool _allow_self_request = true);

@@ -138,6 +138,7 @@ private:
      */
     // ===============
     std::unique_ptr<mac_algorithm> get_deserializer_mac_algorithm() const;
+    std::unique_ptr<mac_algorithm> get_uk_deserializer_mac_algorithm() const;
     std::unique_ptr<mac_algorithm> get_mac_algorithm(byte_t domain_num) const;
     // ===============
     /**

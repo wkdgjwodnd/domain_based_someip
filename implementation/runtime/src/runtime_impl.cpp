@@ -104,19 +104,29 @@ std::shared_ptr<message> runtime_impl::create_notification(
     return (its_notification);
 }
 */
-std::shared_ptr<message> runtime_impl::create_notification(
-        const byte_t domain_num_,
-        bool _reliable) const {
-    VSOMEIP_WARNING << "create_notification2";
-    std::shared_ptr<message_impl> its_notification = std::make_shared<
-            message_impl>();
+std::shared_ptr<message> runtime_impl::create_notification(bool _reliable) const {
+    VSOMEIP_WARNING << "create_notification";
+    std::shared_ptr<message_impl> its_notification = std::make_shared<message_impl>();
     its_notification->set_protocol_version(VSOMEIP_PROTOCOL_VERSION);
     its_notification->set_message_type(message_type_e::MT_NOTIFICATION);
     its_notification->set_return_code(return_code_e::E_OK);
     its_notification->set_reliable(_reliable);
     its_notification->set_interface_version(DEFAULT_MAJOR);
-    // ===========================================
-    if(domain_num_ == 10){
+    return (its_notification);
+}
+
+std::shared_ptr<message> runtime_impl::create_notification_with_domain(
+        const byte_t domain_num_,
+        bool _reliable) const {
+    VSOMEIP_WARNING << "create_notification_with_domain";
+    std::shared_ptr<message_impl> its_notification = std::make_shared<message_impl>();
+    its_notification->set_protocol_version(VSOMEIP_PROTOCOL_VERSION);
+    its_notification->set_message_type(message_type_e::MT_NOTIFICATION);
+    its_notification->set_return_code(return_code_e::E_OK);
+    its_notification->set_reliable(_reliable);
+    its_notification->set_interface_version(DEFAULT_MAJOR);
+    
+    if(domain_num_ == 10) {
         its_notification->set_client(0x3918);
     }
     else if (domain_num_ == 20) {
@@ -125,7 +135,7 @@ std::shared_ptr<message> runtime_impl::create_notification(
     else {
         its_notification->set_client(0x0000);
     }
-    // ===========================================
+    
     return (its_notification);
 }
 // =============

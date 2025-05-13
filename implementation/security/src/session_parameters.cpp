@@ -71,6 +71,7 @@ session_parameters::session_parameters(crypto_algorithm_packed _algorithm_packed
                  (security_level::SL_NOSEC == get_security_level() || !key_.empty()) &&
                  initialize_serializers(_buffer_shrink_threshold) &&
                  deserializer_->add_allowed_peer(PROVIDER_INSTANCE_ID)) {
+    VSOMEIP_WARNING << "session_parameters::session_parameters2";
 }
 */
 session_parameters::session_parameters(crypto_algorithm_packed _algorithm_packed, random &_random,
@@ -128,10 +129,7 @@ session_parameters::session_parameters(crypto_algorithm_packed _algorithm_packed
 }
 // ====================================
 
-// ===
-void set_domain_key() {
-    key_ = key;
-}
+
 // ===
 
 security_level session_parameters::get_security_level() const {
