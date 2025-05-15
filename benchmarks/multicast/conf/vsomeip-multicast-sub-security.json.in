@@ -1,0 +1,59 @@
+{
+    "unicast" : "@BENCH_IP_SLAVE@",
+    "logging" : {
+        "level" : "debug",
+        "console" : "true",
+        "file" : { "enable" : "false", "path" : "/var/log/vsomeip.log" },
+        "dlt" : "false"
+    },
+    "applications" : [
+        {
+            "name" : "multicast-sub-sample",
+            "id" : "0x1343"
+        }
+    ],
+    "services" : [
+        {
+            "service" : "0x1234",
+            "instance" : "0x5678",
+            "eventgroups" : [
+                {
+                    "eventgroup" : "0x0001",
+                    "events" : [ "0x0421" ],
+                    "multicast" : {
+                        "address" : "224.244.224.245",
+                        "port" : "31000"
+                    }
+                }
+            ]
+        }
+    ],
+    "routing" : "multicast-sub-sample",
+    "service-discovery" : {
+        "enable" : "true",
+        "multicast" : "224.244.224.245",
+        "port" : "30490",
+        "protocol" : "udp"
+    },
+    "service-security" : {
+        "certificates-path" : "@CRYPTO_CERTIFICATES_FOLDER_RELATIVE@",
+        "root-certificate-fingerprint" : "@CRYPTO_ROOT_CA_CERTIFICATE@",
+        "private-key-path" : "@CRYPTO_CHOSEN_KEY_RELATIVE@",
+        "certificate-fingerprint" : "@CRYPTO_CHOSEN_CERTIFICATE@",
+        "default-algorithms" : [
+            {
+                "security-level" : "authentication",
+                "security-algorithm" : "@CONFIGURATION_CRYPTO_ALGORITHM@"
+            },
+            {
+                "security-level" : "confidentiality",
+                "security-algorithm" : "@CONFIGURATION_CRYPTO_ALGORITHM@"
+            }
+        ]
+    },
+    "configuration-security" : {
+        "signature-algorithm" : "rsa2048-sha256",
+        "certificate-fingerprint" : "@CRYPTO_CONFIGURATION_SIGNATURE_CERTIFICATE@",
+        "signature" : "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+}

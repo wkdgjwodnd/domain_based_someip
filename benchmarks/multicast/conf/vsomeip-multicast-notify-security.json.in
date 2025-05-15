@@ -1,0 +1,71 @@
+{
+    "unicast" : "@BENCH_IP_MASTER@",
+    "logging" : {
+        "level" : "debug",
+        "console" : "true",
+        "dlt" : "false"
+    },
+    "applications" : [
+        {
+            "name" : "multicast-notify-sample",
+            "id" : "0x1277"
+        }
+    ],
+    "services" : [
+        {
+            "service" : "0x1234",
+            "instance" : "0x5678",
+            "unreliable" : "31000",
+            "reliable" : {
+                "port" : "31001",
+                "enable-magic-cookies" : "false"
+            },
+            "events" : [
+                {
+                    "event" : "0x0421",
+                    "is_field" : "true",
+                    "is_reliable" : "false"
+                }
+            ],
+            "eventgroups" : [
+                {
+                    "eventgroup" : "0x0001",
+                    "events" : [ "0x0421" ],
+                    "multicast" : {
+                        "address" : "224.244.224.245",
+                        "port" : "31000"
+                    },
+                    "threshold" : "1"
+                }
+            ]
+        }
+    ],
+    "routing" : "multicast-notify-sample",
+    "service-discovery" : {
+        "enable" : "true",
+        "multicast" : "224.244.224.245",
+        "port" : "30490",
+        "protocol" : "udp"
+    },
+    "service-security" : {
+        "certificates-path" : "@CRYPTO_CERTIFICATES_FOLDER_RELATIVE@",
+        "root-certificate-fingerprint" : "@CRYPTO_ROOT_CA_CERTIFICATE@",
+        "private-key-path" : "@CRYPTO_CHOSEN_KEY_RELATIVE@",
+        "certificate-fingerprint" : "@CRYPTO_CHOSEN_CERTIFICATE@",
+        "default-algorithms" : [
+            {
+                "security-level" : "authentication",
+                "security-algorithm" : "@CONFIGURATION_CRYPTO_ALGORITHM@"
+            },
+            {
+                "security-level" : "confidentiality",
+                "security-algorithm" : "@CONFIGURATION_CRYPTO_ALGORITHM@"
+            }
+        ]
+    },
+    "configuration-security" : {
+        "signature-algorithm" : "rsa2048-sha256",
+        "certificate-fingerprint" : "@CRYPTO_CONFIGURATION_SIGNATURE_CERTIFICATE@",
+        "signature" : "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    }
+}
