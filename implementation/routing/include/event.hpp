@@ -45,7 +45,7 @@ public:
     const std::shared_ptr<payload> get_cached_payload() const;
 
     void set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
-                     std::shared_ptr<payload> &_payload, bool _force, bool _flush);
+                     std::shared_ptr<payload> &_payload, const byte_t domain_num_, bool _force, bool _flush);
     void set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
                      std::shared_ptr<payload> &_payload, client_t _client, bool _force, bool _flush);
     void set_payload(const std::shared_ptr<message_serializer> &_message_serializer,
@@ -134,7 +134,8 @@ private:
     bool set_message_helper(const byte_t *_data, length_t _size, bool _force);
     void reset_message(const byte_t *_data, length_t _size);
     bool reset_payload(const std::shared_ptr<message_serializer> &_message_serializer,
-                       const std::shared_ptr<payload> &_payload);
+                       const std::shared_ptr<payload> &_payload,
+                       const byte_t domain_num_);
 
 private:
     routing_manager *routing_;

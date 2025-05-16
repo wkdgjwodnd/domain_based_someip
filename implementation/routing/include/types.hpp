@@ -33,6 +33,8 @@ typedef std::map<service_t,
 typedef std::map<service_t,
         std::map<instance_t,
                 std::shared_ptr<session_parameters> > > sessions_t;
+                // session_t는 service, instance 두 개의 map으로 중첩된 구조를 가지고 있음.
+                // map은 find를 통하여 찾을 수 있고,find(service)와 find(instance)를 통하여 session을 찾을 수 있음.
 
 class eventgroupinfo;
 

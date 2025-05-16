@@ -18,6 +18,8 @@
 #include "../../common/include/crypto_types.hpp"
 #include "../../../logging/include/logger.hpp"
 
+#include <cstring>
+
 namespace vsomeip {
 
 /// \brief Converts a certificate fingerprint into an hexadecimal string.

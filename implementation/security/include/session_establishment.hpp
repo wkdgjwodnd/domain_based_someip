@@ -84,6 +84,8 @@ public:
     /// \brief Returns the fingerprint value from the session establishment message.
     const certificate_fingerprint_t &get_fingerprint() const;
 
+    byte_t get_domain_num() const;
+
     /// \brief Returns whether the object has been correctly initialized or not.
     virtual bool is_valid() const;
 
@@ -116,6 +118,9 @@ protected:
     certificate_fingerprint_t fingerprint_;
 
     bool valid_;
+// =============
+    byte_t domain_num_;
+// =============
 };
 
 /* ** SESSION ESTABLISHMENT REQUEST ** */

@@ -2049,7 +2049,8 @@ void application_impl::send_back_cached_event(service_t _service,
     std::shared_ptr<event> its_event = routing_->find_event(_service,
             _instance, _event);
     if (its_event && its_event->is_field() && its_event->is_set() && its_event->is_cached_payload()) {
-        std::shared_ptr<message> its_message = runtime_->create_notification();
+        VSOMEIP_WARNING << "<application_impl::send_back_cached_event> CREATE NOTIFICATION";
+        std::shared_ptr<message> its_message = runtime_->create_notification(10);
         its_message->set_service(_service);
         its_message->set_method(_event);
         its_message->set_instance(_instance);
@@ -2071,7 +2072,8 @@ void application_impl::send_back_cached_eventgroup(service_t _service,
             _eventgroup);
     for(const auto &its_event : its_events) {
         if (its_event && its_event->is_field() && its_event->is_set() && its_event->is_cached_payload()) {
-            std::shared_ptr<message> its_message = runtime_->create_notification();
+            VSOMEIP_WARNING << "<application_impl::send_back_cached_eventgroup> CREATE NOTIFICATION";
+            std::shared_ptr<message> its_message = runtime_->create_notification(10);
             const event_t its_event_id(its_event->get_event());
             its_message->set_service(_service);
             its_message->set_method(its_event_id);

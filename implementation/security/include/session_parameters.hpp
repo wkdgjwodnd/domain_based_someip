@@ -74,9 +74,16 @@ public:
      * @param _buffer_shrink_threshold requested to initialize plain vsomeip::serializer
      *                                 and vsomeip::deserializer object.
      */
+
+    /*
     session_parameters(crypto_algorithm_packed _algorithm_packed, const std::vector<byte_t> &_encrypted_key,
                        crypto_instance_t _instance_id, const std::shared_ptr<asymmetric_crypto_private> &_private_key,
                        uint32_t _buffer_shrink_threshold);
+    */
+     session_parameters(crypto_algorithm_packed _algorithm_packed, const std::vector<byte_t> &_encrypted_key,
+                       const std::vector<byte_t> &_encrypted_update_key,
+                       crypto_instance_t _instance_id, const std::shared_ptr<asymmetric_crypto_private> &_private_key,
+                       uint32_t _buffer_shrink_threshold);  
 
     session_parameters(const session_parameters &) = delete;
 
@@ -89,10 +96,16 @@ public:
     crypto_algorithm get_crypto_algorithm() const;
 
     /// \brief Returns the vsomeip::message_serializer associated to the session.
-    const std::shared_ptr<message_serializer> &get_serializer() const;
+
+    // =========
+    //const std::shared_ptr<message_serializer> &get_serializer() const;
+    const std::shared_ptr<message_serializer> &get_serializer(byte_t domain_num_) const;
+    // =========
 
     /// \biref Returns the vsomeip::message_deserializer associated to the session.
     const std::shared_ptr<message_deserializer> &get_deserializer() const;
+
+    const std::shared_ptr<message_deserializer> &get_uk_deserializer() const;
 
     /**
      * \brief Returns the next instance ID to be assigned to a requester, in case
@@ -108,7 +121,9 @@ public:
      * In case the current instance does not represent the provider of the
      * service or an error occurs, an empty vector is returned.
      */
-    std::vector<byte_t> get_encrypted_key(const std::shared_ptr<asymmetric_crypto_public> &_peer_public_key) const;
+    std::vector<byte_t> get_encrypted_key(const std::shared_ptr<asymmetric_crypto_public> &_peer_public_key, byte_t _domain_num) const;
+
+    std::vector<byte_t> get_encrypted_update_key(const std::shared_ptr<asymmetric_crypto_public> &_peer_public_key, byte_t _domain_num) const; // get_encrypted_update_key 헤더 추가
 
     /// \brief Returns whether the object is associated to the service provider or not.
     bool is_provider() const;
@@ -121,14 +136,21 @@ private:
      * \brief Returns a brand-new vsomeip::mac_algorithm object created according
      * to the specified symmetric algorithm and embedding the associated key.
      */
-    std::unique_ptr<mac_algorithm> get_mac_algorithm() const;
-
+    // ===============
+    std::unique_ptr<mac_algorithm> get_deserializer_mac_algorithm() const;
+    std::unique_ptr<mac_algorithm> get_uk_deserializer_mac_algorithm() const;
+    std::unique_ptr<mac_algorithm> get_mac_algorithm(byte_t domain_num) const;
+    // ===============
     /**
      * \brief Returns a brand-new vsomeip::aead_algorithm object created according
      * to the specified symmetric algorithm and embedding the associated key.
      */
-    std::unique_ptr<aead_algorithm> get_aead_algorithm() const;
-
+    // ==================
+    // std::unique_ptr<aead_algorithm> get_aead_algorithm() const;
+    std::unique_ptr<aead_algorithm> get_deserializer_aead_algorithm() const;
+    std::unique_ptr<aead_algorithm> get_uk_deserializer_aead_algorithm() const;
+    std::unique_ptr<aead_algorithm> get_aead_algorithm(byte_t domain_num) const;
+    // ==================
     /**
      * \brief Creates and initializes the vsomeip::message_serializer and
      * vsomeip::message_deserializer objects according to the parameters
@@ -138,14 +160,31 @@ private:
 
 private:
     const crypto_algorithm_packed algorithm_packed_;
-    const secure_vector<byte_t> key_;
+    const secure_vector<byte_t> key_;   // 도메인 키
+
+    // 업데이트 키 추가
+    const secure_vector<byte_t> uk_;   // 업데이트 키
+
+    const secure_vector<byte_t> dk1_;  // 도메인 1 키
+    const secure_vector<byte_t> dk2_;  // 도메인 2 키
+    const secure_vector<byte_t> uk1_;  // 업데이트 1 키
+    const secure_vector<byte_t> uk2_;  // 업데이트 2 키
     const crypto_instance_t instance_id_;
+
+    
 
     std::mutex next_instance_id_mutex_;
     crypto_instance_t next_instance_id_;
 
-    std::shared_ptr<message_serializer> serializer_;
+    // =============
+    //std::shared_ptr<message_serializer> serializer_;
+    std::shared_ptr<message_serializer> serializer1_;
+    std::shared_ptr<message_serializer> serializer2_;
+    byte_t domain_num_;
+    // =============
+    
     std::shared_ptr<message_deserializer> deserializer_;
+    std::shared_ptr<message_deserializer> uk_deserializer_;
 
     const bool valid_;
 };
@@ -154,3 +193,4 @@ private:
 
 
 #endif //VSOMEIP_SESSION_PARAMETERS_HPP
+
