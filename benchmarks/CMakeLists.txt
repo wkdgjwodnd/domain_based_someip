@@ -252,3 +252,30 @@ configure_file(
         @ONLY)
 copy_to_builddir(${PROJECT_SOURCE_DIR}/benchmarks/run_iperf3_throughput_benchmarks.sh
         ${BENCH_OUTPUT}/run_iperf3_throughput_benchmarks.sh build_benchmarks)
+        
+        
+        
+
+##############################################################################
+# multicast security configurations
+##############################################################################
+
+set(BENCH_MULTICAST_FOLDER ${PROJECT_SOURCE_DIR}/benchmarks/multicast)
+
+configure_file(
+        ${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-notify-security.json.in
+        ${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-notify-security.json
+        @ONLY)
+sign_configuration(${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-notify-security.json
+        ${CRYPTO_CONFIGURATION_SIGNATURE_KEY} ${OPENSSL_LOG} ${CRYPTO_LOCK})
+copy_to_builddir(${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-notify-security.json
+        ${BENCH_CONFIG_OUTPUT}/vsomeip-multicast-notify-security.json build_benchmarks)
+
+configure_file(
+        ${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-sub-security.json.in
+        ${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-sub-security.json
+        @ONLY)
+sign_configuration(${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-sub-security.json
+        ${CRYPTO_CONFIGURATION_SIGNATURE_KEY} ${OPENSSL_LOG} ${CRYPTO_LOCK})
+copy_to_builddir(${BENCH_MULTICAST_FOLDER}/conf/vsomeip-multicast-sub-security.json
+        ${BENCH_CONFIG_OUTPUT}/vsomeip-multicast-sub-security.json build_benchmarks)
